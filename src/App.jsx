@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from ‘react’;
 import { Upload, User, FileSpreadsheet, AlertCircle, ChevronLeft, ChevronRight } from ‘lucide-react’;
 import * as XLSX from ‘xlsx’;
 
-const WorkScheduler = () => {
+const App = () => {
 const [data, setData] = useState([]);
 const [user, setUser] = useState(’’);
 const [error, setError] = useState(’’);
@@ -12,7 +12,6 @@ const [view, setView] = useState(‘mySchedule’);
 const [dayTasks, setDayTasks] = useState(null);
 const [filter, setFilter] = useState(‘all’);
 
-// Load saved data on mount
 useEffect(() => {
 try {
 const savedData = localStorage.getItem(‘scheduleData’);
@@ -21,10 +20,7 @@ const savedView = localStorage.getItem(‘viewMode’);
 const savedFilter = localStorage.getItem(‘testFilter’);
 
 ```
-  if (savedData) {
-    const parsed = JSON.parse(savedData);
-    setData(parsed);
-  }
+  if (savedData) setData(JSON.parse(savedData));
   if (savedUser) setUser(savedUser);
   if (savedView) setView(savedView);
   if (savedFilter) setFilter(savedFilter);
@@ -35,26 +31,18 @@ const savedFilter = localStorage.getItem(‘testFilter’);
 
 }, []);
 
-// Save data whenever it changes
 useEffect(() => {
-if (data.length > 0) {
-localStorage.setItem(‘scheduleData’, JSON.stringify(data));
-}
+if (data.length > 0) localStorage.setItem(‘scheduleData’, JSON.stringify(data));
 }, [data]);
 
-// Save user preference
 useEffect(() => {
-if (user) {
-localStorage.setItem(‘currentUser’, user);
-}
+if (user) localStorage.setItem(‘currentUser’, user);
 }, [user]);
 
-// Save view preference
 useEffect(() => {
 localStorage.setItem(‘viewMode’, view);
 }, [view]);
 
-// Save filter preference
 useEffect(() => {
 localStorage.setItem(‘testFilter’, filter);
 }, [filter]);
@@ -171,6 +159,7 @@ mep: r[‘MEP Description’] || r.MEP || null
 if (proc.length === 0) { setError(‘No valid data’); return; }
 setData(proc);
 if (!user) setUser(proc[0].person);
+localStorage.setItem(‘uploadTimestamp’, new Date().toISOString());
 } catch (err) { setError(‘Error reading file’); }
 };
 reader.readAsArrayBuffer(file);
@@ -184,6 +173,30 @@ long: d.toLocaleDateString(‘en-US’, {weekday: ‘long’}),
 num: d.toLocaleDateString(‘en-US’, {month: ‘numeric’, day: ‘numeric’}),
 today: ds === new Date().toISOString().split(‘T’)[0]
 };
+};
+
+const clearAllData = () => {
+if (window.confirm(‘Are you sure you want to clear all data? This cannot be undone.’)) {
+localStorage.clear();
+setData([]);
+setUser(’’);
+setView(‘mySchedule’);
+setFilter(‘all’);
+setError(’’);
+}
+};
+
+const getUploadInfo = () => {
+const timestamp = localStorage.getItem(‘uploadTimestamp’);
+if (!timestamp) return null;
+const date = new Date(timestamp);
+return date.toLocaleDateString(‘en-US’, {
+month: ‘short’,
+day: ‘numeric’,
+year: ‘numeric’,
+hour: ‘numeric’,
+minute: ‘2-digit’
+});
 };
 
 const WeekNav = () => (
@@ -237,8 +250,18 @@ return (
 <div className="min-h-screen bg-gray-900 p-6">
 <div className="max-w-7xl mx-auto">
 <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-700">
+<div className="flex items-center justify-between">
+<div>
 <h1 className="text-3xl font-bold text-white mb-2">Work Scheduler</h1>
 <p className="text-gray-400">Manage your schedule</p>
+{getUploadInfo() && (
+<p className="text-xs text-gray-500 mt-1">Last uploaded: {getUploadInfo()}</p>
+)}
+</div>
+<button onClick={clearAllData} className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded-lg font-medium transition-colors">
+Clear All Data
+</button>
+</div>
 </div>
 
 ```
@@ -446,4 +469,4 @@ return (
 );
 };
 
-export default WorkScheduler;
+export default App;
