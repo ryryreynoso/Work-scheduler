@@ -864,8 +864,269 @@ const App = () => {
             </>
           )}
 
-          {/* Month + list sections remain the same structure (already conflict-free here) */}
-          {/* ... */}
+          {view === "monthly" && (
+            <>
+              <div className="bg-gray-950/60 rounded-2xl border border-white/10 p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      const [y, m] = month.split("-").map(Number);
+                      const prev = new Date(y, m - 2, 1);
+                      setMonth(prev.toISOString().slice(0, 7));
+                    }}
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
+                  >
+                    <ChevronLeft size={18} />
+                    Prev
+                  </button>
+
+                  <div className="text-center">
+                    <h3 className="font-semibold text-white">
+                      {new Date(`${month}-01`).toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </h3>
+                    <button
+                      onClick={() =>
+                        setMonth(new Date().toISOString().slice(0, 7))
+                      }
+                      className="text-indigo-400 text-xs mt-1 hover:text-indigo-300 transition"
+                    >
+                      This Month
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const [y, m] = month.split("-").map(Number);
+                      const next = new Date(y, m, 1);
+                      setMonth(next.toISOString().slice(0, 7));
+                    }}
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
+                  >
+                    Next
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-semibold text-white mb-4">
+                My Monthly Calendar
+              </h3>
+
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
+                  <div
+                    key={day}
+                    className="text-center font-semibold text-sm text-gray-400 py-2"
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {monthDays.map((day) => {
+                  const tasks = calTasks[day.date] || [];
+                  return (
+                    <button
+                      key={day.date}
+                      onClick={() => setDayTasks(tasks.length > 0 ? day.date : null)}
+                      className={`min-h-[100px] rounded-xl p-2 border transition text-left
+                        ${
+                          day.isToday
+                            ? "border-indigo-400/60 bg-indigo-500/10"
+                            : day.isCurrentMonth
+                            ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20"
+                            : "border-white/5 bg-black/20"
+                        }
+                        ${tasks.length > 0 ? "cursor-pointer" : "cursor-default"}
+                      `}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span
+                          className={`text-sm font-semibold ${
+                            day.isCurrentMonth ? "text-white" : "text-gray-500"
+                          }`}
+                        >
+                          {day.dayNum}
+                        </span>
+                        {day.isToday && (
+                          <span className="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">
+                            Today
+                          </span>
+                        )}
+                      </div>
+
+                      {tasks.length > 0 && (
+                        <div className="space-y-1">
+                          {tasks.slice(0, 2).map((t) => (
+                            <div
+                              key={t.id}
+                              className="text-[10px] bg-blue-500/20 border border-blue-400/30 text-blue-100 px-1.5 py-1 rounded truncate"
+                            >
+                              {t.test}
+                            </div>
+                          ))}
+                          {tasks.length > 2 && (
+                            <div className="text-[9px] text-gray-400 px-1">
+                              +{tasks.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {dayTasks && (
+                <div
+                  className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                  onClick={() => setDayTasks(null)}
+                >
+                  <div
+                    className="bg-gray-900 rounded-2xl border border-white/20 p-6 max-w-lg w-full max-h-[80vh] overflow-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">
+                        {new Date(`${dayTasks}T00:00:00`).toLocaleDateString(
+                          "en-US",
+                          { weekday: "long", month: "long", day: "numeric" }
+                        )}
+                      </h3>
+                      <button
+                        onClick={() => setDayTasks(null)}
+                        className="text-gray-400 hover:text-white transition text-2xl leading-none"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {(calTasks[dayTasks] || []).map((t) => (
+                        <div
+                          key={t.id}
+                          className="border border-white/10 rounded-xl p-3 bg-black/30"
+                        >
+                          <h4 className="font-semibold text-white mb-2">{t.test}</h4>
+                          <div className="text-sm text-gray-300 space-y-1">
+                            {t.mep && (
+                              <div className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
+                                <span className="font-bold">MEP: </span>
+                                {t.mep}
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-semibold">Location: </span>
+                              {t.location || "N/A"}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Time: </span>
+                              {t.time || "N/A"}
+                            </div>
+                            {t.zipCode && (
+                              <div>
+                                <span className="font-semibold">Zip: </span>
+                                {t.zipCode}
+                              </div>
+                            )}
+                            {t.testId && (
+                              <div>
+                                <span className="font-semibold">Test ID: </span>
+                                {t.testId}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {view === "list" && (
+            <>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                {user ? `${user}'s Schedule` : "All Schedules"}
+              </h3>
+
+              <div className="space-y-3">
+                {filtered
+                  .filter((t) => !user || t.person === user)
+                  .sort((a, b) => new Date(a.date) - new Date(b.date))
+                  .map((t) => (
+                    <div
+                      key={t.id}
+                      className="border border-white/10 rounded-2xl p-4 bg-white/5 hover:bg-white/10 transition"
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                        <div>
+                          <h4 className="font-semibold text-white text-base mb-1">
+                            {t.test}
+                          </h4>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs bg-blue-500/10 border border-blue-400/20 text-blue-200 px-2 py-1 rounded-lg">
+                              {t.person}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(`${t.date}T00:00:00`).toLocaleDateString(
+                                "en-US",
+                                {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        {t.mep && (
+                          <div className="bg-indigo-500/10 border border-indigo-400/20 px-3 py-2 rounded-xl text-indigo-200">
+                            <span className="font-bold">MEP: </span>
+                            {t.mep}
+                          </div>
+                        )}
+                        <div className="text-gray-300">
+                          <span className="font-semibold">Location: </span>
+                          {t.location || "N/A"}
+                        </div>
+                        <div className="text-gray-300">
+                          <span className="font-semibold">Time: </span>
+                          {t.time || "N/A"}
+                        </div>
+                        {t.zipCode && (
+                          <div className="text-gray-300">
+                            <span className="font-semibold">Zip Code: </span>
+                            {t.zipCode}
+                          </div>
+                        )}
+                        {t.testId && (
+                          <div className="text-gray-300">
+                            <span className="font-semibold">Test ID: </span>
+                            {t.testId}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                {filtered.filter((t) => !user || t.person === user).length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">No tests found</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <div className="mt-8">
             <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
               <div className="flex items-center justify-between gap-3 flex-wrap">
