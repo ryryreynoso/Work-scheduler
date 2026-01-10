@@ -43,8 +43,6 @@ const App = () => {
   const metaRef = doc(db, "schedule", "current");
 
   async function saveScheduleToFirestore(rows) {
-    // NOTE: Firestore batch limit is 500 operations.
-    // If your schedule could exceed ~450 rows, tell me and I'll upgrade this to chunked batches.
     const batch = writeBatch(db);
 
     // Delete old rows
@@ -130,6 +128,7 @@ const App = () => {
       q,
       (snap) => {
         const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log("Loaded data from Firestore:", rows.length, "rows");
         setData(rows);
 
         // Set default user if none selected
@@ -198,10 +197,11 @@ const App = () => {
     [data]
   );
 
-  const filtered = useMemo(
-    () => (filter === "all" ? data : data.filter((i) => i.test === filter)),
-    [data, filter]
-  );
+  const filtered = useMemo(() => {
+    const result = filter === "all" ? data : data.filter((i) => i.test === filter);
+    console.log("Filtered data:", result.length, "items");
+    return result;
+  }, [data, filter]);
 
   const weekDates = useMemo(() => {
     if (!weekStart) return [];
@@ -266,7 +266,10 @@ const App = () => {
   }, [month]);
 
   const calTasks = useMemo(() => {
-    if (!user) return {};
+    if (!user) {
+      console.log("No user selected for calendar");
+      return {};
+    }
     const t = {};
     filtered.forEach((i) => {
       if (i.person === user) {
@@ -275,11 +278,12 @@ const App = () => {
         t[d].push(i);
       }
     });
+    console.log("Calendar tasks for", user, ":", Object.keys(t).length, "days with tasks");
     return t;
   }, [filtered, user]);
 
   // ---------------------------
-  // Upload Handler (save to Firestore) - UPDATED
+  // Upload Handler (save to Firestore)
   // ---------------------------
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -302,11 +306,9 @@ const App = () => {
           return;
         }
 
-        // Get column names (case-insensitive matching)
         const firstRow = json[0];
         const columns = Object.keys(firstRow);
         
-        // Helper function to find column (case-insensitive)
         const findColumn = (possibleNames) => {
           const lowerColumns = columns.map(c => c.toLowerCase());
           for (const name of possibleNames) {
@@ -316,7 +318,6 @@ const App = () => {
           return null;
         };
 
-        // Map column names
         const dateCol = findColumn(['Date', 'date', 'Date/Time', 'DateTime', 'Test Date']);
         const nameCol = findColumn(['Name', 'name', 'Person', 'person', 'Employee', 'Technician', 'Tech']);
         const testCol = findColumn(['Test', 'test', 'Test Type', 'TestType', 'Service']);
@@ -337,7 +338,6 @@ const App = () => {
           mep: mepCol
         });
 
-        // Check required columns
         const missing = [];
         if (!dateCol) missing.push('Date');
         if (!nameCol) missing.push('Name/Person');
@@ -345,9 +345,7 @@ const App = () => {
 
         if (missing.length > 0) {
           setError(
-            `Missing required columns: ${missing.join(', ')}.\n\n` +
-            `Found columns: ${columns.join(', ')}\n\n` +
-            `Please ensure your Excel file has columns for Date, Name/Person, and Test.`
+            `Missing required columns: ${missing.join(', ')}.\n\nFound columns: ${columns.join(', ')}\n\nPlease ensure your Excel file has columns for Date, Name/Person, and Test.`
           );
           return;
         }
@@ -360,10 +358,8 @@ const App = () => {
           const personValue = r[nameCol];
           const testValue = r[testCol];
 
-          // Skip empty rows
           if (!personValue && !testValue && !dateValue) return;
 
-          // Validate required fields
           if (!personValue) {
             errors.push(`Row ${idx + 2}: Missing person name`);
             return;
@@ -377,16 +373,13 @@ const App = () => {
             return;
           }
 
-          // Parse date
           let date;
           try {
             if (typeof dateValue === "number") {
-              // Excel serial date
               date = new Date((dateValue - 25569) * 86400 * 1000)
                 .toISOString()
                 .split("T")[0];
             } else if (typeof dateValue === "string") {
-              // Try to parse string date
               const parsed = new Date(dateValue);
               if (isNaN(parsed.getTime())) {
                 errors.push(`Row ${idx + 2}: Invalid date format "${dateValue}"`);
@@ -436,9 +429,8 @@ const App = () => {
           setUser(proc[0].person);
         }
 
-        // Show success message
         if (errors.length === 0) {
-          setError(""); // Clear any previous errors
+          setError("");
           alert(`Successfully imported ${proc.length} schedule entries!`);
         }
 
@@ -461,9 +453,6 @@ const App = () => {
     };
   };
 
-  // ---------------------------
-  // Clear All Data (clears Firestore)
-  // ---------------------------
   const clearAllData = async () => {
     if (!hasWindow) return;
     if (window.confirm("Are you sure you want to clear all data? This cannot be undone.")) {
@@ -481,9 +470,6 @@ const App = () => {
     }
   };
 
-  // ---------------------------
-  // UI Components (polished)
-  // ---------------------------
   const WeekNav = () => (
     <div className="bg-gray-950/60 rounded-2xl border border-white/10 p-4 mb-6">
       <div className="flex items-center justify-between">
@@ -531,16 +517,16 @@ const App = () => {
     </div>
   );
 
-  const panel =
-    "bg-gray-900/60 rounded-2xl shadow-2xl shadow-black/30 p-6 border border-white/10 backdrop-blur";
-  const headerPanel =
-    "bg-gradient-to-br from-gray-900/80 to-gray-800/60 rounded-2xl shadow-2xl shadow-black/40 p-5 border border-white/10";
-  const selectClass =
-    "p-3 border border-white/10 rounded-xl bg-black/30 text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/50";
+  const panel = "bg-gray-900/60 rounded-2xl shadow-2xl shadow-black/30 p-6 border border-white/10 backdrop-blur";
+  const headerPanel = "bg-gradient-to-br from-gray-900/80 to-gray-800/60 rounded-2xl shadow-2xl shadow-black/40 p-5 border border-white/10";
+  const selectClass = "p-3 border border-white/10 rounded-xl bg-black/30 text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/50";
 
-  // ---------------------------
-  // Render
-  // ---------------------------
+  // Debug view state
+  console.log("Current view:", view);
+  console.log("Current user:", user);
+  console.log("Total data:", data.length);
+  console.log("Filtered data:", filtered.length);
+
   if (loading && data.length === 0) {
     return (
       <div className="min-h-screen bg-gray-950 p-6 text-gray-200">
@@ -593,7 +579,7 @@ const App = () => {
             {error && (
               <div className="mt-4 p-4 bg-red-950/60 border border-red-500/30 rounded-2xl flex items-start gap-2">
                 <AlertCircle className="text-red-300" size={18} />
-                <p className="text-red-200 text-sm">{error}</p>
+                <p className="text-red-200 text-sm whitespace-pre-line">{error}</p>
               </div>
             )}
           </div>
@@ -606,7 +592,7 @@ const App = () => {
     <div className="min-h-screen bg-gray-950 p-6 text-gray-200">
       <div className="max-w-7xl mx-auto">
         <div className={`${headerPanel} mb-6`}>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-white leading-tight">
                 Work Schedule
@@ -629,7 +615,6 @@ const App = () => {
         </div>
 
         <div className={panel}>
-          {/* Sticky Controls */}
           <div className="sticky top-3 z-30 bg-gray-900/80 backdrop-blur rounded-2xl p-4 border border-white/10 mb-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex gap-4 flex-wrap">
@@ -670,7 +655,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
                 {[
                   ["mySchedule", "My Weekly"],
@@ -680,8 +664,11 @@ const App = () => {
                 ].map(([key, label]) => (
                   <button
                     key={key}
-                    onClick={() => setView(key)}
-                    className={`py-2 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
+                    onClick={() => {
+                      console.log("Switching to view:", key);
+                      setView(key);
+                    }}
+                    className={`py-2 px-3 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
                     ${
                       view === key
                         ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
@@ -695,7 +682,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* VIEWS */}
           {view === "mySchedule" && (
             <>
               <WeekNav />
@@ -757,9 +743,7 @@ const App = () => {
                                   </div>
                                 )}
                                 <div>
-                                  <span className="font-semibold">
-                                    Location:{" "}
-                                  </span>
+                                  <span className="font-semibold">Location: </span>
                                   {t.location || "N/A"}
                                 </div>
                                 <div>
@@ -874,7 +858,7 @@ const App = () => {
                       const prev = new Date(y, m - 2, 1);
                       setMonth(prev.toISOString().slice(0, 7));
                     }}
-                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition"
                   >
                     <ChevronLeft size={18} />
                     Prev
@@ -888,9 +872,7 @@ const App = () => {
                       })}
                     </h3>
                     <button
-                      onClick={() =>
-                        setMonth(new Date().toISOString().slice(0, 7))
-                      }
+                      onClick={() => setMonth(new Date().toISOString().slice(0, 7))}
                       className="text-indigo-400 text-xs mt-1 hover:text-indigo-300 transition"
                     >
                       This Month
@@ -903,7 +885,7 @@ const App = () => {
                       const next = new Date(y, m, 1);
                       setMonth(next.toISOString().slice(0, 7));
                     }}
-                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition"
                   >
                     Next
                     <ChevronRight size={18} />
@@ -912,15 +894,12 @@ const App = () => {
               </div>
 
               <h3 className="text-lg font-semibold text-white mb-4">
-                My Monthly Calendar
+                My Monthly Calendar - {user}
               </h3>
 
               <div className="grid grid-cols-7 gap-2 mb-2">
                 {["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => (
-                  <div
-                    key={day}
-                    className="text-center font-semibold text-sm text-gray-400 py-2"
-                  >
+                  <div key={day} className="text-center font-semibold text-sm text-gray-400 py-2">
                     {day}
                   </div>
                 ))}
@@ -934,22 +913,12 @@ const App = () => {
                       key={day.date}
                       onClick={() => setDayTasks(tasks.length > 0 ? day.date : null)}
                       className={`min-h-[100px] rounded-xl p-2 border transition text-left
-                        ${
-                          day.isToday
-                            ? "border-indigo-400/60 bg-indigo-500/10"
-                            : day.isCurrentMonth
-                            ? "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20"
-                            : "border-white/5 bg-black/20"
-                        }
+                        ${day.isToday ? "border-indigo-400/60 bg-indigo-500/10" : day.isCurrentMonth ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-white/5 bg-black/20"}
                         ${tasks.length > 0 ? "cursor-pointer" : "cursor-default"}
                       `}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span
-                          className={`text-sm font-semibold ${
-                            day.isCurrentMonth ? "text-white" : "text-gray-500"
-                          }`}
-                        >
+                        <span className={`text-sm font-semibold ${day.isCurrentMonth ? "text-white" : "text-gray-500"}`}>
                           {day.dayNum}
                         </span>
                         {day.isToday && (
@@ -962,17 +931,12 @@ const App = () => {
                       {tasks.length > 0 && (
                         <div className="space-y-1">
                           {tasks.slice(0, 2).map((t) => (
-                            <div
-                              key={t.id}
-                              className="text-[10px] bg-blue-500/20 border border-blue-400/30 text-blue-100 px-1.5 py-1 rounded truncate"
-                            >
+                            <div key={t.id} className="text-[10px] bg-blue-500/20 border border-blue-400/30 text-blue-100 px-1.5 py-1 rounded truncate">
                               {t.test}
                             </div>
                           ))}
                           {tasks.length > 2 && (
-                            <div className="text-[9px] text-gray-400 px-1">
-                              +{tasks.length - 2} more
-                            </div>
+                            <div className="text-[9px] text-gray-400 px-1">+{tasks.length - 2} more</div>
                           )}
                         </div>
                       )}
@@ -982,63 +946,29 @@ const App = () => {
               </div>
 
               {dayTasks && (
-                <div
-                  className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                  onClick={() => setDayTasks(null)}
-                >
-                  <div
-                    className="bg-gray-900 rounded-2xl border border-white/20 p-6 max-w-lg w-full max-h-[80vh] overflow-auto"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setDayTasks(null)}>
+                  <div className="bg-gray-900 rounded-2xl border border-white/20 p-6 max-w-lg w-full max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white">
-                        {new Date(`${dayTasks}T00:00:00`).toLocaleDateString(
-                          "en-US",
-                          { weekday: "long", month: "long", day: "numeric" }
-                        )}
+                        {new Date(`${dayTasks}T00:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                       </h3>
-                      <button
-                        onClick={() => setDayTasks(null)}
-                        className="text-gray-400 hover:text-white transition text-2xl leading-none"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => setDayTasks(null)} className="text-gray-400 hover:text-white transition text-2xl">✕</button>
                     </div>
 
                     <div className="space-y-3">
                       {(calTasks[dayTasks] || []).map((t) => (
-                        <div
-                          key={t.id}
-                          className="border border-white/10 rounded-xl p-3 bg-black/30"
-                        >
+                        <div key={t.id} className="border border-white/10 rounded-xl p-3 bg-black/30">
                           <h4 className="font-semibold text-white mb-2">{t.test}</h4>
                           <div className="text-sm text-gray-300 space-y-1">
                             {t.mep && (
                               <div className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
-                                <span className="font-bold">MEP: </span>
-                                {t.mep}
+                                <span className="font-bold">MEP: </span>{t.mep}
                               </div>
                             )}
-                            <div>
-                              <span className="font-semibold">Location: </span>
-                              {t.location || "N/A"}
-                            </div>
-                            <div>
-                              <span className="font-semibold">Time: </span>
-                              {t.time || "N/A"}
-                            </div>
-                            {t.zipCode && (
-                              <div>
-                                <span className="font-semibold">Zip: </span>
-                                {t.zipCode}
-                              </div>
-                            )}
-                            {t.testId && (
-                              <div>
-                                <span className="font-semibold">Test ID: </span>
-                                {t.testId}
-                              </div>
-                            )}
+                            <div><span className="font-semibold">Location: </span>{t.location || "N/A"}</div>
+                            <div><span className="font-semibold">Time: </span>{t.time || "N/A"}</div>
+                            {t.zipCode && <div><span className="font-semibold">Zip: </span>{t.zipCode}</div>}
+                            {t.testId && <div><span className="font-semibold">Test ID: </span>{t.testId}</div>}
                           </div>
                         </div>
                       ))}
@@ -1054,34 +984,25 @@ const App = () => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 {user ? `${user}'s Schedule` : "All Schedules"}
               </h3>
+              <p className="text-xs text-gray-400 mb-4">
+                Showing {filtered.filter((t) => !user || t.person === user).length} items
+              </p>
 
               <div className="space-y-3">
                 {filtered
                   .filter((t) => !user || t.person === user)
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .map((t) => (
-                    <div
-                      key={t.id}
-                      className="border border-white/10 rounded-2xl p-4 bg-white/5 hover:bg-white/10 transition"
-                    >
+                    <div key={t.id} className="border border-white/10 rounded-2xl p-4 bg-white/5 hover:bg-white/10 transition">
                       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                         <div>
-                          <h4 className="font-semibold text-white text-base mb-1">
-                            {t.test}
-                          </h4>
+                          <h4 className="font-semibold text-white text-base mb-1">{t.test}</h4>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs bg-blue-500/10 border border-blue-400/20 text-blue-200 px-2 py-1 rounded-lg">
                               {t.person}
                             </span>
                             <span className="text-xs text-gray-400">
-                              {new Date(`${t.date}T00:00:00`).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                }
-                              )}
+                              {new Date(`${t.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                             </span>
                           </div>
                         </div>
@@ -1090,30 +1011,13 @@ const App = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         {t.mep && (
                           <div className="bg-indigo-500/10 border border-indigo-400/20 px-3 py-2 rounded-xl text-indigo-200">
-                            <span className="font-bold">MEP: </span>
-                            {t.mep}
+                            <span className="font-bold">MEP: </span>{t.mep}
                           </div>
                         )}
-                        <div className="text-gray-300">
-                          <span className="font-semibold">Location: </span>
-                          {t.location || "N/A"}
-                        </div>
-                        <div className="text-gray-300">
-                          <span className="font-semibold">Time: </span>
-                          {t.time || "N/A"}
-                        </div>
-                        {t.zipCode && (
-                          <div className="text-gray-300">
-                            <span className="font-semibold">Zip Code: </span>
-                            {t.zipCode}
-                          </div>
-                        )}
-                        {t.testId && (
-                          <div className="text-gray-300">
-                            <span className="font-semibold">Test ID: </span>
-                            {t.testId}
-                          </div>
-                        )}
+                        <div className="text-gray-300"><span className="font-semibold">Location: </span>{t.location || "N/A"}</div>
+                        <div className="text-gray-300"><span className="font-semibold">Time: </span>{t.time || "N/A"}</div>
+                        {t.zipCode && <div className="text-gray-300"><span className="font-semibold">Zip Code: </span>{t.zipCode}</div>}
+                        {t.testId && <div className="text-gray-300"><span className="font-semibold">Test ID: </span>{t.testId}</div>}
                       </div>
                     </div>
                   ))}
@@ -1132,29 +1036,22 @@ const App = () => {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-sm">
                   <div className="font-semibold text-white">Update Schedule</div>
-                  <div className="text-xs text-gray-400/90">
-                    Upload a new Excel file anytime (updates for everyone)
-                  </div>
+                  <div className="text-xs text-gray-400/90">Upload a new Excel file anytime (updates for everyone)</div>
                 </div>
 
                 <label className="cursor-pointer">
-                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]">
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition">
                     <Upload size={16} />
                     Upload New File
                   </span>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleUpload}
-                    className="hidden"
-                  />
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={handleUpload} className="hidden" />
                 </label>
               </div>
 
               {error && (
                 <div className="mt-3 p-3 bg-red-950/60 border border-red-500/30 rounded-xl flex items-start gap-2">
                   <AlertCircle className="text-red-300" size={18} />
-                  <p className="text-red-200 text-sm">{error}</p>
+                  <p className="text-red-200 text-sm whitespace-pre-line">{error}</p>
                 </div>
               )}
             </div>
