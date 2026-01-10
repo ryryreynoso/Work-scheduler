@@ -279,7 +279,7 @@ const App = () => {
   }, [filtered, user]);
 
   // ---------------------------
-  // Upload Handler (save to Firestore)
+  // Upload Handler (save to Firestore) - UPDATED
   // ---------------------------
   const handleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -294,46 +294,157 @@ const App = () => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
 
-        const proc = [];
-        json.forEach((r) => {
-          const d = r.Date || r.date;
-          const p = r.Name || r.name || "";
-          const t = r.Test || r.test || "";
+        console.log("Raw Excel data (first 3 rows):", json.slice(0, 3));
+        console.log("Available columns:", json[0] ? Object.keys(json[0]) : []);
 
-          if (p && t && d) {
-            let date;
-            if (typeof d === "number") {
-              date = new Date((d - 25569) * 86400 * 1000)
-                .toISOString()
-                .split("T")[0];
-            } else {
-              date = new Date(d).toISOString().split("T")[0];
-            }
+        if (json.length === 0) {
+          setError("The Excel file appears to be empty.");
+          return;
+        }
 
-            proc.push({
-              test: String(t).trim(),
-              date,
-              person: String(p).trim(),
-              time: r.Time || r.time || null,
-              location: r.Location || r.location || null,
-              zipCode: r["Zip Code"] || r.ZipCode || null,
-              testId: r["Test ID"] || r.TestID || null,
-              mep: r["MEP Description"] || r.MEP || null,
-            });
+        // Get column names (case-insensitive matching)
+        const firstRow = json[0];
+        const columns = Object.keys(firstRow);
+        
+        // Helper function to find column (case-insensitive)
+        const findColumn = (possibleNames) => {
+          const lowerColumns = columns.map(c => c.toLowerCase());
+          for (const name of possibleNames) {
+            const idx = lowerColumns.indexOf(name.toLowerCase());
+            if (idx !== -1) return columns[idx];
           }
+          return null;
+        };
+
+        // Map column names
+        const dateCol = findColumn(['Date', 'date', 'Date/Time', 'DateTime', 'Test Date']);
+        const nameCol = findColumn(['Name', 'name', 'Person', 'person', 'Employee', 'Technician', 'Tech']);
+        const testCol = findColumn(['Test', 'test', 'Test Type', 'TestType', 'Service']);
+        const timeCol = findColumn(['Time', 'time', 'Start Time', 'StartTime']);
+        const locationCol = findColumn(['Location', 'location', 'Site', 'Address']);
+        const zipCol = findColumn(['Zip Code', 'ZipCode', 'Zip', 'ZIP', 'Postal Code', 'zip code']);
+        const testIdCol = findColumn(['Test ID', 'TestID', 'ID', 'Job ID', 'JobID', 'test id']);
+        const mepCol = findColumn(['MEP Description', 'Mep description', 'MEP', 'mep', 'Description', 'Notes']);
+
+        console.log("Mapped columns:", {
+          date: dateCol,
+          name: nameCol,
+          test: testCol,
+          time: timeCol,
+          location: locationCol,
+          zip: zipCol,
+          testId: testIdCol,
+          mep: mepCol
         });
 
+        // Check required columns
+        const missing = [];
+        if (!dateCol) missing.push('Date');
+        if (!nameCol) missing.push('Name/Person');
+        if (!testCol) missing.push('Test');
+
+        if (missing.length > 0) {
+          setError(
+            `Missing required columns: ${missing.join(', ')}.\n\n` +
+            `Found columns: ${columns.join(', ')}\n\n` +
+            `Please ensure your Excel file has columns for Date, Name/Person, and Test.`
+          );
+          return;
+        }
+
+        const proc = [];
+        const errors = [];
+
+        json.forEach((r, idx) => {
+          const dateValue = r[dateCol];
+          const personValue = r[nameCol];
+          const testValue = r[testCol];
+
+          // Skip empty rows
+          if (!personValue && !testValue && !dateValue) return;
+
+          // Validate required fields
+          if (!personValue) {
+            errors.push(`Row ${idx + 2}: Missing person name`);
+            return;
+          }
+          if (!testValue) {
+            errors.push(`Row ${idx + 2}: Missing test type`);
+            return;
+          }
+          if (!dateValue) {
+            errors.push(`Row ${idx + 2}: Missing date`);
+            return;
+          }
+
+          // Parse date
+          let date;
+          try {
+            if (typeof dateValue === "number") {
+              // Excel serial date
+              date = new Date((dateValue - 25569) * 86400 * 1000)
+                .toISOString()
+                .split("T")[0];
+            } else if (typeof dateValue === "string") {
+              // Try to parse string date
+              const parsed = new Date(dateValue);
+              if (isNaN(parsed.getTime())) {
+                errors.push(`Row ${idx + 2}: Invalid date format "${dateValue}"`);
+                return;
+              }
+              date = parsed.toISOString().split("T")[0];
+            } else {
+              errors.push(`Row ${idx + 2}: Unexpected date format`);
+              return;
+            }
+          } catch (err) {
+            errors.push(`Row ${idx + 2}: Could not parse date "${dateValue}"`);
+            return;
+          }
+
+          proc.push({
+            test: String(testValue).trim(),
+            date,
+            person: String(personValue).trim(),
+            time: timeCol && r[timeCol] ? String(r[timeCol]).trim() : null,
+            location: locationCol && r[locationCol] ? String(r[locationCol]).trim() : null,
+            zipCode: zipCol && r[zipCol] ? String(r[zipCol]).trim() : null,
+            testId: testIdCol && r[testIdCol] ? String(r[testIdCol]).trim() : null,
+            mep: mepCol && r[mepCol] ? String(r[mepCol]).trim() : null,
+          });
+        });
+
+        console.log(`Processed ${proc.length} valid rows`);
+        console.log("Sample processed data:", proc.slice(0, 3));
+
+        if (errors.length > 0) {
+          console.warn("Errors during import:", errors);
+          setError(
+            `Import completed with warnings:\n\n${errors.slice(0, 5).join('\n')}` +
+            (errors.length > 5 ? `\n\n...and ${errors.length - 5} more errors` : '')
+          );
+        }
+
         if (proc.length === 0) {
-          setError("No valid data found in file.");
+          setError("No valid data found in file. Please check the format and try again.");
           return;
         }
 
         await saveScheduleToFirestore(proc);
 
-        if (!user) setUser(proc[0].person);
+        if (!user && proc.length > 0) {
+          setUser(proc[0].person);
+        }
+
+        // Show success message
+        if (errors.length === 0) {
+          setError(""); // Clear any previous errors
+          alert(`Successfully imported ${proc.length} schedule entries!`);
+        }
+
       } catch (err) {
-        console.error(err);
-        setError("Error reading file.");
+        console.error("Upload error:", err);
+        setError(`Error reading file: ${err.message}`);
       }
     };
 
@@ -436,7 +547,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto">
           <div className={headerPanel}>
             <h1 className="text-2xl font-bold text-white leading-tight">
-              Work Scheduler
+              Work Schedule
             </h1>
             <p className="text-sm text-gray-400 mt-1">Loading schedule…</p>
           </div>
@@ -451,7 +562,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto">
           <div className={`${headerPanel} mb-6`}>
             <h1 className="text-2xl font-bold text-white leading-tight">
-              Work Scheduler
+              Work Schedule
             </h1>
             <p className="text-sm text-gray-400 mt-1">
               Upload your schedule to get started
@@ -498,7 +609,7 @@ const App = () => {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white leading-tight">
-                Work Scheduler
+                Work Schedule
               </h1>
               <p className="text-sm text-gray-400 mt-1">Manage your schedule</p>
               {uploadInfo && (
