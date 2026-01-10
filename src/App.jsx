@@ -19,13 +19,11 @@ const App = () => {
   const [dayTasks, setDayTasks] = useState(null);
   const [filter, setFilter] = useState("all");
 
-  // Safe in Vite; also prevents any accidental SSR-ish access
   const hasWindow = typeof window !== "undefined";
   const storage = hasWindow ? window.localStorage : null;
 
   useEffect(() => {
     if (!storage) return;
-
     try {
       const savedData = storage.getItem("scheduleData");
       const savedUser = storage.getItem("currentUser");
@@ -65,7 +63,6 @@ const App = () => {
     const date = new Date(d);
     date.setHours(12, 0, 0, 0);
     const day = date.getDay();
-    // Saturday start (Sat=6). If not Saturday, go back to prior Saturday.
     date.setDate(date.getDate() - (day === 6 ? 0 : day + 1));
     return date.toISOString().split("T")[0];
   };
@@ -78,10 +75,9 @@ const App = () => {
     () => [...new Set(data.map((i) => i.person))].sort(),
     [data]
   );
-  const tests = useMemo(
-    () => [...new Set(data.map((i) => i.test))].sort(),
-    [data]
-  );
+  const tests = useMemo(() => [...new Set(data.map((i) => i.test))].sort(), [
+    data,
+  ]);
   const filtered = useMemo(
     () => (filter === "all" ? data : data.filter((i) => i.test === filter)),
     [data, filter]
@@ -129,8 +125,8 @@ const App = () => {
   const monthDays = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
     const firstDay = new Date(y, m - 1, 1);
-
     const daysBack = firstDay.getDay() === 6 ? 0 : firstDay.getDay() + 1;
+
     const startDate = new Date(firstDay);
     startDate.setDate(firstDay.getDate() - daysBack);
 
@@ -264,7 +260,7 @@ const App = () => {
   };
 
   const WeekNav = () => (
-    <div className="bg-gray-900 rounded-lg border border-gray-700 p-4 mb-6">
+    <div className="bg-gray-950/60 rounded-2xl border border-white/10 p-4 mb-6">
       <div className="flex items-center justify-between">
         <button
           onClick={() => {
@@ -272,9 +268,9 @@ const App = () => {
             c.setDate(c.getDate() - 7);
             setWeekStart(c.toISOString().split("T")[0]);
           }}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-200 flex items-center gap-2"
+          className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
         >
-          <ChevronLeft size={20} />
+          <ChevronLeft size={18} />
           Prev
         </button>
 
@@ -289,7 +285,7 @@ const App = () => {
           </h3>
           <button
             onClick={() => setWeekStart(getSaturday(new Date()))}
-            className="text-indigo-400 text-sm mt-1"
+            className="text-indigo-400 text-xs mt-1 hover:text-indigo-300 transition"
           >
             Today
           </button>
@@ -301,38 +297,48 @@ const App = () => {
             c.setDate(c.getDate() + 7);
             setWeekStart(c.toISOString().split("T")[0]);
           }}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-200 flex items-center gap-2"
+          className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
         >
           Next
-          <ChevronRight size={20} />
+          <ChevronRight size={18} />
         </button>
       </div>
     </div>
   );
 
+  // Shared classes (polish)
+  const panel =
+    "bg-gray-900/60 rounded-2xl shadow-2xl shadow-black/30 p-6 border border-white/10 backdrop-blur";
+  const headerPanel =
+    "bg-gradient-to-br from-gray-900/80 to-gray-800/60 rounded-2xl shadow-2xl shadow-black/40 p-5 border border-white/10";
+  const selectClass =
+    "p-3 border border-white/10 rounded-xl bg-black/30 text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/50";
+
   if (data.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-900 p-6">
+      <div className="min-h-screen bg-gray-950 p-6 text-gray-200">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-700">
-            <h1 className="text-3xl font-bold text-white mb-2">
+          <div className={`${headerPanel} mb-6`}>
+            <h1 className="text-2xl font-bold text-white leading-tight">
               Work Scheduler
             </h1>
-            <p className="text-gray-400">Upload your schedule to get started</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Upload your schedule to get started
+            </p>
           </div>
 
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+          <div className={panel}>
             <div className="flex items-center gap-3 mb-4">
-              <FileSpreadsheet className="text-indigo-400" size={24} />
-              <h2 className="text-xl font-semibold text-white">
+              <FileSpreadsheet className="text-indigo-400" size={22} />
+              <h2 className="text-lg font-semibold text-white">
                 Upload Schedule
               </h2>
             </div>
 
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-indigo-500 bg-gray-900">
-              <Upload className="mx-auto text-gray-500 mb-3" size={48} />
+            <div className="border-2 border-dashed border-white/15 rounded-2xl p-10 text-center bg-white/5 hover:border-indigo-400/60 hover:bg-indigo-500/5 transition">
+              <Upload className="mx-auto text-gray-400 mb-3" size={44} />
               <label className="cursor-pointer">
-                <span className="text-indigo-400 hover:text-indigo-300 font-medium text-lg">
+                <span className="text-indigo-300 hover:text-indigo-200 font-semibold text-base">
                   Click to upload Excel file
                 </span>
                 <input
@@ -345,9 +351,9 @@ const App = () => {
             </div>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-900 border border-red-700 rounded-lg flex items-start gap-2">
-                <AlertCircle className="text-red-400" size={20} />
-                <p className="text-red-300 text-sm">{error}</p>
+              <div className="mt-4 p-4 bg-red-950/60 border border-red-500/30 rounded-2xl flex items-start gap-2">
+                <AlertCircle className="text-red-300" size={18} />
+                <p className="text-red-200 text-sm">{error}</p>
               </div>
             )}
           </div>
@@ -357,17 +363,18 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-950 p-6 text-gray-200">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-700">
-          <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className={`${headerPanel} mb-6`}>
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-2xl font-bold text-white leading-tight">
                 Work Scheduler
               </h1>
-              <p className="text-gray-400">Manage your schedule</p>
+              <p className="text-sm text-gray-400 mt-1">Manage your schedule</p>
               {getUploadInfo() && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-400/80 mt-1">
                   Last uploaded: {getUploadInfo()}
                 </p>
               )}
@@ -375,95 +382,106 @@ const App = () => {
 
             <button
               onClick={clearAllData}
-              className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-200 rounded-lg font-medium transition-colors"
+              className="px-4 py-2 rounded-xl font-semibold text-sm bg-red-950/60 text-red-100 border border-red-500/30 hover:bg-red-900/60 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
             >
               Clear All Data
             </button>
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-            <div className="flex gap-4 flex-wrap">
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block flex items-center gap-2">
-                  <User size={16} />
-                  I am
-                </label>
-                <select
-                  value={user}
-                  onChange={(e) => setUser(e.target.value)}
-                  className="p-3 border border-gray-600 rounded-lg bg-gray-900 text-white"
-                >
-                  {people.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+        {/* Main */}
+        <div className={panel}>
+          {/* Sticky controls (mobile-friendly) */}
+          <div className="sticky top-3 z-30 bg-gray-900/80 backdrop-blur rounded-2xl p-4 border border-white/10 mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex gap-4 flex-wrap">
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 mb-2 block flex items-center gap-2">
+                    <User size={14} />I am
+                  </label>
+                  <select
+                    value={user}
+                    onChange={(e) => setUser(e.target.value)}
+                    className={selectClass}
+                  >
+                    {people.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 mb-2 block flex items-center gap-2">
+                    <FileSpreadsheet size={14} />
+                    Filter
+                  </label>
+                  <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="all">All Tests</option>
+                    {tests.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block flex items-center gap-2">
-                  <FileSpreadsheet size={16} />
-                  Filter
-                </label>
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  className="p-3 border border-gray-600 rounded-lg bg-gray-900 text-white"
+              {/* Tabs */}
+              <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => setView("mySchedule")}
+                  className={`py-2 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
+                  ${
+                    view === "mySchedule"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
+                  }`}
                 >
-                  <option value="all">All Tests</option>
-                  {tests.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  My Weekly
+                </button>
 
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setView("mySchedule")}
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  view === "mySchedule"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                My Weekly
-              </button>
-              <button
-                onClick={() => setView("teamWeekly")}
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  view === "teamWeekly"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Team Weekly
-              </button>
-              <button
-                onClick={() => setView("monthly")}
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  view === "monthly"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setView("list")}
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  view === "list"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                List
-              </button>
+                <button
+                  onClick={() => setView("teamWeekly")}
+                  className={`py-2 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
+                  ${
+                    view === "teamWeekly"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
+                  }`}
+                >
+                  Team Weekly
+                </button>
+
+                <button
+                  onClick={() => setView("monthly")}
+                  className={`py-2 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
+                  ${
+                    view === "monthly"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
+                  }`}
+                >
+                  Monthly
+                </button>
+
+                <button
+                  onClick={() => setView("list")}
+                  className={`py-2 rounded-xl text-sm font-semibold transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]
+                  ${
+                    view === "list"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                      : "bg-white/5 text-gray-300 hover:bg-white/10"
+                  }`}
+                >
+                  List
+                </button>
+              </div>
             </div>
           </div>
 
@@ -473,36 +491,41 @@ const App = () => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 My Weekly Schedule
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                 {weekDates.map((date) => {
                   const { short, long, num, today } = fmt(date);
                   const tasks = myWeek[date] || [];
+
                   return (
                     <div
                       key={date}
-                      className={`border-2 rounded-lg p-3 ${
+                      className={`rounded-2xl p-4 border transition
+                      ${
                         today
-                          ? "border-indigo-500 bg-indigo-950"
-                          : "border-gray-700 bg-gray-800"
+                          ? "border-indigo-400/60 bg-indigo-500/10 shadow-md shadow-indigo-500/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20"
                       }`}
                     >
                       <div className="mb-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-bold text-white">{short}</h4>
-                            <p className="text-xs text-gray-400">{long}</p>
+                            <h4 className="font-semibold text-white text-sm">
+                              {short}
+                            </h4>
+                            <p className="text-xs text-gray-400/90">{long}</p>
                           </div>
                           {today && (
-                            <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-full">
                               Today
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-300 mt-1">{num}</p>
+                        <p className="text-sm text-gray-200 mt-1">{num}</p>
                       </div>
 
                       {tasks.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
+                        <p className="text-sm text-gray-400/80 text-center py-4">
                           No tests
                         </p>
                       ) : (
@@ -510,14 +533,14 @@ const App = () => {
                           {tasks.map((t) => (
                             <div
                               key={t.id}
-                              className="border border-gray-700 rounded-lg p-2 bg-gray-900"
+                              className="border border-white/10 rounded-xl p-2 bg-black/30"
                             >
-                              <h4 className="font-bold text-white text-sm mb-1">
+                              <h4 className="font-semibold text-white text-sm mb-1">
                                 {t.test}
                               </h4>
-                              <div className="text-xs text-gray-300">
+                              <div className="text-xs text-gray-300 space-y-0.5">
                                 {t.mep && (
-                                  <div className="bg-indigo-900 px-2 py-1 rounded text-indigo-300 mb-1">
+                                  <div className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
                                     <span className="font-bold">MEP: </span>
                                     {t.mep}
                                   </div>
@@ -550,36 +573,41 @@ const App = () => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 Team Weekly Schedule
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                 {weekDates.map((date) => {
                   const { short, long, num, today } = fmt(date);
                   const tasks = allWeek[date] || [];
+
                   return (
                     <div
                       key={date}
-                      className={`border-2 rounded-lg p-3 ${
+                      className={`rounded-2xl p-4 border transition
+                      ${
                         today
-                          ? "border-indigo-500 bg-indigo-950"
-                          : "border-gray-700 bg-gray-800"
+                          ? "border-indigo-400/60 bg-indigo-500/10 shadow-md shadow-indigo-500/10"
+                          : "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20"
                       }`}
                     >
                       <div className="mb-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-bold text-white">{short}</h4>
-                            <p className="text-xs text-gray-400">{long}</p>
+                            <h4 className="font-semibold text-white text-sm">
+                              {short}
+                            </h4>
+                            <p className="text-xs text-gray-400/90">{long}</p>
                           </div>
                           {today && (
-                            <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-full">
                               Today
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-300 mt-1">{num}</p>
+                        <p className="text-sm text-gray-200 mt-1">{num}</p>
                       </div>
 
                       {tasks.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
+                        <p className="text-sm text-gray-400/80 text-center py-4">
                           No tests
                         </p>
                       ) : (
@@ -587,19 +615,20 @@ const App = () => {
                           {tasks.map((t) => (
                             <div
                               key={t.id}
-                              className="border border-gray-700 rounded-lg p-2 bg-gray-900"
+                              className="border border-white/10 rounded-xl p-2 bg-black/30"
                             >
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h4 className="font-bold text-white text-sm">
+                                <h4 className="font-semibold text-white text-sm">
                                   {t.test}
                                 </h4>
-                                <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] bg-blue-500/10 border border-blue-400/20 text-blue-200 px-2 py-0.5 rounded-full">
                                   {t.person}
                                 </span>
                               </div>
-                              <div className="text-xs text-gray-300">
+
+                              <div className="text-xs text-gray-300 space-y-0.5">
                                 {t.mep && (
-                                  <div className="bg-indigo-900 px-2 py-1 rounded text-indigo-300 mb-1">
+                                  <div className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
                                     <span className="font-bold">MEP: </span>
                                     {t.mep}
                                   </div>
@@ -626,7 +655,7 @@ const App = () => {
 
           {view === "monthly" && (
             <>
-              <div className="bg-gray-900 rounded-lg border border-gray-700 p-4 mb-6">
+              <div className="bg-gray-950/60 rounded-2xl border border-white/10 p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => {
@@ -634,9 +663,9 @@ const App = () => {
                       const d = new Date(y, m - 2, 1);
                       setMonth(d.toISOString().slice(0, 7));
                     }}
-                    className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-200 flex items-center gap-2"
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={18} />
                     Prev
                   </button>
 
@@ -651,7 +680,7 @@ const App = () => {
                       onClick={() =>
                         setMonth(new Date().toISOString().slice(0, 7))
                       }
-                      className="text-indigo-400 text-sm mt-1"
+                      className="text-indigo-400 text-xs mt-1 hover:text-indigo-300 transition"
                     >
                       Today
                     </button>
@@ -663,10 +692,10 @@ const App = () => {
                       const d = new Date(y, m, 1);
                       setMonth(d.toISOString().slice(0, 7));
                     }}
-                    className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-200 flex items-center gap-2"
+                    className="px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 rounded-lg text-gray-200 flex items-center gap-1 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]"
                   >
                     Next
-                    <ChevronRight size={20} />
+                    <ChevronRight size={18} />
                   </button>
                 </div>
               </div>
@@ -675,7 +704,7 @@ const App = () => {
                 {["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((d) => (
                   <div
                     key={d}
-                    className="text-center font-bold text-sm py-2 bg-gray-900 rounded text-gray-300"
+                    className="text-center font-semibold text-xs py-2 bg-white/5 rounded-xl text-gray-300 border border-white/10"
                   >
                     {d}
                   </div>
@@ -692,32 +721,34 @@ const App = () => {
                         tasks.length > 0 &&
                         setDayTasks({ date: day.date, tasks })
                       }
-                      className={`min-h-24 border rounded-lg p-2 ${
+                      className={`min-h-24 border rounded-2xl p-2 transition
+                      ${
                         tasks.length > 0
-                          ? "cursor-pointer hover:border-indigo-500"
+                          ? "cursor-pointer hover:bg-white/10 hover:border-indigo-400/60"
                           : ""
-                      } ${
+                      }
+                      ${
                         day.isToday
-                          ? "bg-indigo-950 border-indigo-500 border-2"
+                          ? "bg-indigo-500/10 border-indigo-400/60"
                           : day.isCurrentMonth
-                          ? "bg-gray-800 border-gray-700"
-                          : "bg-gray-900 border-gray-800"
+                          ? "bg-white/5 border-white/10"
+                          : "bg-black/20 border-white/5"
                       }`}
                     >
                       <div className="flex justify-between mb-1">
                         <span
                           className={`text-sm font-semibold ${
                             day.isToday
-                              ? "text-indigo-400"
+                              ? "text-indigo-300"
                               : day.isCurrentMonth
                               ? "text-gray-200"
-                              : "text-gray-600"
+                              : "text-gray-500"
                           }`}
                         >
                           {day.dayNum}
                         </span>
                         {day.isToday && (
-                          <span className="text-xs bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">
+                          <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">
                             Today
                           </span>
                         )}
@@ -728,13 +759,13 @@ const App = () => {
                           {tasks.slice(0, 3).map((t) => (
                             <div
                               key={t.id}
-                              className="text-xs bg-indigo-900 text-indigo-300 px-2 py-1 rounded truncate"
+                              className="text-[11px] bg-indigo-500/10 border border-indigo-400/20 text-indigo-200 px-2 py-1 rounded-lg truncate"
                             >
                               {t.test}
                             </div>
                           ))}
                           {tasks.length > 3 && (
-                            <div className="text-xs text-gray-500 text-center">
+                            <div className="text-[11px] text-gray-400 text-center">
                               +{tasks.length - 3} more
                             </div>
                           )}
@@ -747,14 +778,14 @@ const App = () => {
 
               {dayTasks && (
                 <div
-                  className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50"
+                  className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
                   onClick={() => setDayTasks(null)}
                 >
                   <div
-                    className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto"
+                    className="bg-gray-950/80 border border-white/10 rounded-2xl shadow-2xl shadow-black/50 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex justify-between">
+                    <div className="sticky top-0 bg-gray-950/80 backdrop-blur border-b border-white/10 p-4 flex justify-between">
                       <h3 className="text-lg font-bold text-white">
                         {new Date(
                           `${dayTasks.date}T00:00:00`
@@ -766,7 +797,7 @@ const App = () => {
                       </h3>
                       <button
                         onClick={() => setDayTasks(null)}
-                        className="text-gray-400 hover:text-gray-200 text-2xl font-bold"
+                        className="text-gray-300 hover:text-white text-2xl font-bold transition"
                       >
                         ×
                       </button>
@@ -776,12 +807,14 @@ const App = () => {
                       {dayTasks.tasks.map((t) => (
                         <div
                           key={t.id}
-                          className="border border-gray-700 rounded-lg p-4 bg-gray-900"
+                          className="border border-white/10 rounded-2xl p-4 bg-white/5"
                         >
-                          <h4 className="font-bold text-white mb-2">{t.test}</h4>
-                          <div className="space-y-1 text-sm text-gray-300">
+                          <h4 className="font-semibold text-white mb-2">
+                            {t.test}
+                          </h4>
+                          <div className="space-y-1 text-sm text-gray-200/90">
                             {t.mep && (
-                              <div className="bg-indigo-900 px-2 py-1 rounded text-indigo-300">
+                              <div className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
                                 <span className="font-bold">MEP: </span>
                                 {t.mep}
                               </div>
@@ -813,33 +846,34 @@ const App = () => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 My Schedule
               </h3>
-              <div className="overflow-x-auto border border-gray-700 rounded-lg">
+              <div className="overflow-x-auto border border-white/10 rounded-2xl bg-white/5">
                 <table className="w-full">
-                  <thead className="bg-gray-900 border-b-2 border-gray-700">
+                  <thead className="bg-black/30 border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-300 uppercase">
                         Date
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-300 uppercase">
                         Test
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-300 uppercase">
                         MEP
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-300 uppercase">
                         Location
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-300 uppercase">
                         Time
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-gray-800 divide-y divide-gray-700">
+
+                  <tbody className="divide-y divide-white/10">
                     {filtered
                       .filter((i) => i.person === user)
                       .sort((a, b) => new Date(a.date) - new Date(b.date))
                       .map((t) => (
-                        <tr key={t.id} className="hover:bg-gray-700">
+                        <tr key={t.id} className="hover:bg-white/5 transition">
                           <td className="px-4 py-3 text-sm text-gray-200">
                             {new Date(`${t.date}T00:00:00`).toLocaleDateString(
                               "en-US",
@@ -850,22 +884,22 @@ const App = () => {
                               }
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-white">
+                          <td className="px-4 py-3 text-sm font-semibold text-white">
                             {t.test}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-300">
+                          <td className="px-4 py-3 text-sm text-gray-200/90">
                             {t.mep ? (
-                              <span className="bg-indigo-900 px-2 py-1 rounded text-indigo-300">
+                              <span className="bg-indigo-500/10 border border-indigo-400/20 px-2 py-1 rounded-lg text-indigo-200">
                                 {t.mep}
                               </span>
                             ) : (
                               "-"
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-300">
+                          <td className="px-4 py-3 text-sm text-gray-200/90">
                             {t.location || "-"}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-300">
+                          <td className="px-4 py-3 text-sm text-gray-200/90">
                             {t.time || "-"}
                           </td>
                         </tr>
@@ -875,6 +909,40 @@ const App = () => {
               </div>
             </div>
           )}
+
+          {/* Optional: quick re-upload inside app (nice UX) */}
+          <div className="mt-8">
+            <div className="border border-white/10 rounded-2xl p-4 bg-white/5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="text-sm">
+                  <div className="font-semibold text-white">Update Schedule</div>
+                  <div className="text-xs text-gray-400/90">
+                    Upload a new Excel file anytime
+                  </div>
+                </div>
+
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition ring-1 ring-white/10 hover:ring-white/20 active:scale-[0.98]">
+                    <Upload size={16} />
+                    Upload New File
+                  </span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {error && (
+                <div className="mt-3 p-3 bg-red-950/60 border border-red-500/30 rounded-xl flex items-start gap-2">
+                  <AlertCircle className="text-red-300" size={18} />
+                  <p className="text-red-200 text-sm">{error}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
