@@ -1,21 +1,22 @@
-// src/firebase.js
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 
-// ✅ Vite reads env vars ONLY with VITE_ prefix
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAfdwB2Cow8woA3Zmdv-hoZyI0rfGE8nm8",
+  authDomain: "schedule-add.firebaseapp.com",
+  projectId: "schedule-add",
+  storageBucket: "schedule-add.firebasestorage.app",
+  messagingSenderId: "375150033702",
+  appId: "1:375150033702:web:2ac994dc0b875cbcdc5fe7",
+  measurementId: "G-HMLY2TF5GV"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getFirestore(app);
 
-// ✅ This is what App.jsx needs
-export const db = getFirestore(app);
-
-// (optional) export app too
-export { app };
+export { db, analytics };
